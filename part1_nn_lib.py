@@ -120,7 +120,9 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+
+        self._cache_current = x
+        return 1 / (1+ np.exp(-x))
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -143,7 +145,14 @@ class SigmoidLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+
+        x = self._cache_current
+
+        sigmoid_x = 1 / (1 + np.exp(-x))
+
+        grad_x = grad_z * sigmoid_x * (1 - sigmoid_x)
+
+        return grad_x
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -177,7 +186,13 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+
+        self._cache_current = x
+
+        # compare all values to 0, return the larger value
+        # relu activation function lets positive values pass unchanged
+        # converts negative values to zero
+        return np.maximum(0, x)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -200,7 +215,12 @@ class ReluLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+
+        x = self._cache_current
+
+        grad_x = grad_z * (x > 0)
+
+        return grad_x
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -226,8 +246,8 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._W = None
-        self._b = None
+        self._W = xavier_init((n_in, n_out))
+        self._b = np.zeros((1, n_out))
 
         self._cache_current = None
         self._grad_W_current = None
@@ -253,7 +273,11 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+
+        self._cache_current = x
+
+        return np.matmul(x, self._W) + self._b
+
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -276,7 +300,17 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        # Calculate the loss
+        # Pass in the gradient
+
+        x = self._cache_current
+        self._grad_W_current = np.matmul(x.T, grad_z)
+
+        self._grad_b_current = np.sum(grad_z, axis=0, keepdims=True)
+
+        grad_x = np.matmul(grad_z, self._W.T)
+
+        return grad_x
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -293,7 +327,11 @@ class LinearLayer(Layer):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+
+        self._W -= learning_rate * self._grad_W_current
+        self._b -= learning_rate * self._grad_b_current
+
+        return
 
         #######################################################################
         #                       ** END OF YOUR CODE **
