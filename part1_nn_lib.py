@@ -364,7 +364,7 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        # Empty list because loop through neurons in activation and then append to empty ist
+        # Empty list because loop through neurons in activation and then append to empty list
         self._layers = []
 
         # The original layer corresponds to the input layer
