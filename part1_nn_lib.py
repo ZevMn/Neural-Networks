@@ -364,30 +364,29 @@ class MultiLayerNetwork(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        # Empty list because loop through neurons in activation and then append to empty list
+
+        # Empty list to contain the layers of the neural network
         self._layers = []
 
         # The original layer corresponds to the input layer
         prev_dim = input_dim
 
-        # Loop through the number of neurons to create linear layers
-        # LinearLayer(Takes in the self.layer and the neurons)
+        # Loop through the number of neurons to create each linear layer
         # Append the linear layer to the multilayer class
         for i in range(len(self.neurons)):
-            layer = LinearLayer(prev_dim, neurons[i])
+            layer = LinearLayer(prev_dim, neurons[i]) # LinearLayer(n_in, n_out)
             self._layers.append(layer)
 
-            #  Now tackle the activation function by adding the correct activation function to the class
+            # Update n_in for next layer with current n_out
+            prev_dim = neurons[i]
+
+            #  Add the correct activation function to the class
             if activations[i] == "relu":
                 self._layers.append(ReluLayer())
             elif activations[i] == "sigmoid":
                 self._layers.append(SigmoidLayer())
             else:
                 raise ValueError("Invalid activation function.")
-
-            # Update the previous dimension with the new set of neuron layer
-            prev_dim = neurons[i]
-
 
         #######################################################################
         #                       ** END OF YOUR CODE **
