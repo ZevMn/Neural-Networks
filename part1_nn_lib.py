@@ -1,6 +1,8 @@
 import numpy as np
 import pickle
 
+from numpy.random import default_rng
+
 
 def xavier_init(size, gain = 1.0):
     """
@@ -365,6 +367,8 @@ class MultiLayerNetwork(object):
         #                       ** START OF YOUR CODE **
         #######################################################################
 
+        self._activation_dict = {"relu": ReluLayer, "sigmoid": SigmoidLayer}
+
         # Empty list to contain the layers of the neural network
         self._layers = []
 
@@ -381,13 +385,11 @@ class MultiLayerNetwork(object):
             prev_dim = neurons[i]
 
             #  Add the correct activation function to the class
-            if activations[i] == "relu":
-                self._layers.append(ReluLayer())
-            elif activations[i] == "sigmoid":
-                self._layers.append(SigmoidLayer())
+            activation_name = activations[i]
+            if activation_name in self._activation_dict:
+                self._layers.append(self._activation_dict[activation_name]())
             else:
-                raise ValueError("Invalid activation function.")
-
+                raise ValueError(f"Invalid activation function: {activation_name}")
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -518,13 +520,25 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        self._loss_layer = None
+
+        # Dictionary mapping loss function names to their corresponding classes
+        self._loss_fun_dict = {
+            "mse": MSELossLayer,
+            "cross_entropy": CrossEntropyLossLayer
+        }
+
+        # Validate loss function and initialize correct loss layer
+        if loss_fun in self._loss_fun_dict:
+            self._loss_layer = self._loss_fun_dict[loss_fun]()  # Call class constructor
+        else:
+            raise ValueError("Invalid loss function. Choose 'mse' or 'cross_entropy'.")
+
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
 
     @staticmethod
-    def shuffle(input_dataset, target_dataset):
+    def shuffle(input_dataset, target_dataset, random_generator=default_rng(42)):
         """
         Returns shuffled versions of the inputs.
 
@@ -541,7 +555,11 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        shuffled_indices = random_generator.permutation(len(input_dataset))
+        shuffled_input = input_dataset[shuffled_indices]
+        shuffled_target = target_dataset[shuffled_indices]
+
+        return (shuffled_input, shuffled_target)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -570,7 +588,41 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+
+        for epoch in range(self.nb_epoch):
+            if self.shuffle_flag:
+                input_dataset, target_dataset = self.shuffle(input_dataset, target_dataset)
+
+            num_samples = len(input_dataset)
+            # Iterate over the dataset in minibatches
+            for start_idx in range(0, num_samples, self.batch_size):
+                end_idx = start_idx + self.batch_size
+                batch_input = input_dataset[start_idx:end_idx]
+                batch_target = target_dataset[start_idx:end_idx]
+
+                # Train the network on this minibatch
+                
+
+                """- For each batch:
+                - Performs forward pass through the network given the current
+                batch of inputs.
+                - Computes loss.
+                - Performs backward pass to compute gradients of loss with
+                respect to parameters of network.
+                - Performs one step of gradient descent on the network
+                parameters."""
+
+                # Forward Pass
+                predictions = self.network.forward(batch_input)
+
+                # Compute loss
+                loss = self._loss_layer(predictions, batch_target)
+
+                # Backward pass
+                gradients = self.network.backward(loss)
+
+                # Parameter update
+                self.network.update_params(self.learning_rate)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -593,7 +645,8 @@ class Trainer(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        # perform forward pass of network
+        predictions = self.network(input_dataset)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
