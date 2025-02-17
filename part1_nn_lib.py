@@ -668,8 +668,10 @@ class Preprocessor(object):
 
         # Compute column-wise min and max values.
         self.min_vals = np.min(data, axis=0)
-        self.max_vals = np.max(data, axis=0)
+        self.difference = np.max(data, axis=0) - self.min_vals
 
+        # Replace zero scale values to avoid division by zero.
+        self.difference[self.difference == 0] = 1.0
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -688,7 +690,8 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+
+        return (data - self.min_vals) / self.difference
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -707,7 +710,7 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+        return data * self.difference + self.min_vals
 
         #######################################################################
         #                       ** END OF YOUR CODE **
