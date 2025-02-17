@@ -386,10 +386,11 @@ class MultiLayerNetwork(object):
 
             #  Add the correct activation function to the class
             activation_name = activations[i]
-            if activation_name in self._activation_dict:
-                self._layers.append(self._activation_dict[activation_name]())
-            else:
-                raise ValueError(f"Invalid activation function: {activation_name}")
+            if activation_name != "identity":
+                if activation_name in self._activation_dict:
+                    self._layers.append(self._activation_dict[activation_name]())
+                else:
+                    raise ValueError(f"Invalid activation function: {activation_name}")
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
