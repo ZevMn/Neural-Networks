@@ -600,26 +600,17 @@ class Trainer(object):
                 batch_input = input_dataset[start_idx:end_idx]
                 batch_target = target_dataset[start_idx:end_idx]
 
-                # Train the network on this minibatch
-                
-
-                """- For each batch:
-                - Performs forward pass through the network given the current
-                batch of inputs.
-                - Computes loss.
-                - Performs backward pass to compute gradients of loss with
-                respect to parameters of network.
-                - Performs one step of gradient descent on the network
-                parameters."""
+                # Train the network on this minibatch:
 
                 # Forward Pass
                 predictions = self.network.forward(batch_input)
 
-                # Compute loss
-                loss = self._loss_layer(predictions, batch_target)
+                # Compute loss and gradient of loss
+                self._loss_layer.forward(predictions, batch_target)
+                grad_loss = self._loss_layer.backward()
 
-                # Backward pass
-                gradients = self.network.backward(loss)
+                # Backward pass through network
+                self.network.backward(grad_loss)
 
                 # Parameter update
                 self.network.update_params(self.learning_rate)
@@ -648,6 +639,8 @@ class Trainer(object):
         # perform forward pass of network
         predictions = self.network(input_dataset)
 
+        return self._loss_layer.forward(predictions, target_dataset)
+
         #######################################################################
         #                       ** END OF YOUR CODE **
         #######################################################################
@@ -657,6 +650,7 @@ class Preprocessor(object):
     """
     Preprocessor: Object used to apply "preprocessing" operation to datasets.
     The object can also be used to revert the changes.
+    Performs min–max scaling to transform data into the [0, 1] interval.
     """
 
     def __init__(self, data):
@@ -671,7 +665,11 @@ class Preprocessor(object):
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
-        pass
+
+        # Compute column-wise min and max values.
+        self.min_vals = np.min(data, axis=0)
+        self.max_vals = np.max(data, axis=0)
+
 
         #######################################################################
         #                       ** END OF YOUR CODE **
