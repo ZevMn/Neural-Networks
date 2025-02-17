@@ -53,13 +53,53 @@ class Regressor():
             
         """
 
+        ''' 
+        Store some parameters used for the preprocessing to apply the same preprocessing method
+        to all inputs of your model. It is important that any values necessary for data processing
+        (e.g. normalising constants, mapping from categorical values to 1-hot vectors, etc.) are
+        created based on the training data and the same values are applied during testing. You
+        can use the boolean training parameter to determine whether the input is training data
+        (and new dataset-wide preprocessing values should be calculated) or test/validation data
+        (and existing values should be applied).
+        
+        Handle the missing values in the data, for example setting them to a default value. You can
+        use the Pandas function fillna to do it (https://pandas.pydata.org/pandas-docs/
+        stable/reference/api/pandas.DataFrame.fillna.html).
+        
+        Handle the textual values in the data, encoding them using one-hot encoding. For this,
+        you can use the Sklearn class LabelBinarizer (https://scikit-learn.org/stable/
+        modules/generated/sklearn.preprocessing.LabelBinarizer.html). Remember to
+        store all the parameters you need to be able to re-apply your preprocessing again at
+        test time.
+        
+        Eventually normalise the numerical values to improve learning.
+        '''
+
         #######################################################################
         #                       ** START OF YOUR CODE **
         #######################################################################
 
+        # Work on a copy to avoid modifying the original data.
+        x = x.copy()
+
+        # Identify numeric and categorical columns.
+        num_cols = x.select_dtypes(include=['number']).columns.tolist()
+        cat_cols = x.select_dtypes(exclude=['number']).columns.tolist()
+
+        # Fill missing values (if any).
+        if num_cols:
+            x[num_cols] = x[num_cols].fillna(x[num_cols].mean())
+        if cat_cols:
+            x[cat_cols] = x[cat_cols].fillna("missing")
+
+        # One-hot encode categorical columns.
+        x = pd.get_dummies(x, columns=cat_cols, drop_first=False)
+
         # Replace this code with your own
         # Return preprocessed x and y, return None for y if it was None
         return x, (y if isinstance(y, pd.DataFrame) else None)
+
+        # TO DO: normalise and convert to pytorch tensor
 
         #######################################################################
         #                       ** END OF YOUR CODE **
