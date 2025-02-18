@@ -66,8 +66,12 @@ class Regressor():
         cat_cols = x.select_dtypes(exclude=['number']).columns.tolist()
 
         # Fill missing values (if any).
+        if training:
+            self._num_means = x[num_cols].mean()
+            self._num_stds = x[num_cols].std().replace(0, 1) # Avoid division by zero
+
         if num_cols:
-            x[num_cols] = x[num_cols].fillna(x[num_cols].mean())
+            x[num_cols] = x[num_cols].fillna(self._num_means)
         if cat_cols:
             x[cat_cols] = x[cat_cols].fillna("missing")
 
@@ -77,9 +81,6 @@ class Regressor():
         if training:
             # Store the full set of columns to ensure consistency in test mode.
             self._x_columns = x.columns
-
-            self._num_means = x[num_cols].mean()
-            self._num_stds = x[num_cols].std().replace(0, 1)  # Avoid division by zero
         else:
             # Reindex to match training columns, if stored.
             if hasattr(self, '_x_columns'):
@@ -93,8 +94,17 @@ class Regressor():
 
         # Process target y if provided.
         if y is not None:
-            y_processed = y.copy().fillna(y.mean())
-            Y_tensor = torch.tensor(y_processed.values, dtype=torch.float32)
+            y = y.copy()
+
+            if training:
+                self._y_mean = y.mean()
+                self._y_std = y.std().replace(0, 1)
+
+            y = y.fillna(self._y_mean) # Fill in missing y values with training mean
+
+            y_normalised = (y.values - self._y_mean) / self._y_std # Normalise
+            Y_tensor = torch.tensor(y_normalised, dtype=torch.float32).reshape(-1, 1)
+
         else:
             Y_tensor = None
 
