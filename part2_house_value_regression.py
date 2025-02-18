@@ -34,6 +34,7 @@ class Regressor():
         #                       ** END OF YOUR CODE **
         #######################################################################
 
+
     def _preprocessor(self, x, y = None, training = False):
         """ 
         Preprocess input of the network.
@@ -52,28 +53,6 @@ class Regressor():
               size (batch_size, 1).
             
         """
-
-        ''' 
-        Store some parameters used for the preprocessing to apply the same preprocessing method
-        to all inputs of your model. It is important that any values necessary for data processing
-        (e.g. normalising constants, mapping from categorical values to 1-hot vectors, etc.) are
-        created based on the training data and the same values are applied during testing. You
-        can use the boolean training parameter to determine whether the input is training data
-        (and new dataset-wide preprocessing values should be calculated) or test/validation data
-        (and existing values should be applied).
-        
-        Handle the missing values in the data, for example setting them to a default value. You can
-        use the Pandas function fillna to do it (https://pandas.pydata.org/pandas-docs/
-        stable/reference/api/pandas.DataFrame.fillna.html).
-        
-        Handle the textual values in the data, encoding them using one-hot encoding. For this,
-        you can use the Sklearn class LabelBinarizer (https://scikit-learn.org/stable/
-        modules/generated/sklearn.preprocessing.LabelBinarizer.html). Remember to
-        store all the parameters you need to be able to re-apply your preprocessing again at
-        test time.
-        
-        Eventually normalise the numerical values to improve learning.
-        '''
 
         #######################################################################
         #                       ** START OF YOUR CODE **
@@ -95,11 +74,32 @@ class Regressor():
         # One-hot encode categorical columns.
         x = pd.get_dummies(x, columns=cat_cols, drop_first=False)
 
-        # Replace this code with your own
-        # Return preprocessed x and y, return None for y if it was None
-        return x, (y if isinstance(y, pd.DataFrame) else None)
+        if training:
+            # Store the full set of columns to ensure consistency in test mode.
+            self._x_columns = x.columns
 
-        # TO DO: normalise and convert to pytorch tensor
+            self._num_means = x[num_cols].mean()
+            self._num_stds = x[num_cols].std().replace(0, 1)  # Avoid division by zero
+        else:
+            # Reindex to match training columns, if stored.
+            if hasattr(self, '_x_columns'):
+                x = x.reindex(columns=self._x_columns, fill_value=0)
+
+        # Compute and apply Z-score normalisation for numeric columns
+        x[num_cols] = (x[num_cols] - self._num_means) / self._num_stds
+
+        # Convert processed DataFrame to a torch tensor.
+        X_tensor = torch.tensor(x.values, dtype=torch.float32)
+
+        # Process target y if provided.
+        if y is not None:
+            y_processed = y.copy().fillna(y.mean())
+            Y_tensor = torch.tensor(y_processed.values, dtype=torch.float32)
+        else:
+            Y_tensor = None
+
+        # Return preprocessed x and y, return None for y if it was None
+        return X_tensor, Y_tensor
 
         #######################################################################
         #                       ** END OF YOUR CODE **
