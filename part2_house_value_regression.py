@@ -1,11 +1,14 @@
 import torch
+import torch.utils.data
 import pickle
 import numpy as np
 import pandas as pd
+from sklearn.metrics import mean_squared_error
+
 
 class Regressor():
 
-    def __init__(self, x, nb_epoch = 1000):
+    def __init__(self, x, nb_epoch = 1000, hidden_size=10, learning_rate = 0.01, batch_size = 128):
         # You can add any input parameters you need
         # Remember to set them with a default value for LabTS tests
         """ 
@@ -23,12 +26,27 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        # Replace this code with your own
         X, _ = self._preprocessor(x, training = True)
         self.input_size = X.shape[1]
         self.output_size = 1
-        self.nb_epoch = nb_epoch 
-        return
+        self.nb_epoch = nb_epoch
+
+        self.hidden_size = hidden_size
+        self.learning_rate = learning_rate
+        self.batch_size = batch_size
+
+        # Define a simple neural network architecture using PyTorch
+        self.model = torch.nn.Sequential(
+            torch.nn.Linear(self.input_size, self.hidden_size),
+            torch.nn.ReLU(),
+            torch.nn.Linear(self.hidden_size, self.output_size)
+        )
+
+        # Mean Squared Error loss for regression
+        self.loss_criterion = torch.nn.MSELoss()
+
+        # Adam optimiser
+        self.optimiser = torch.optim.Adam(self.model.parameters(), lr = learning_rate)
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -134,7 +152,37 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X, Y = self._preprocessor(x, y = y, training = True) # Do not forget
+        # Preprocess the data. Ensure that X and Y are PyTorch tensors
+        X, Y = self._preprocessor(x, y=y, training=False)
+
+        # Set model to training mode
+        self.model.train()
+
+        # Create a dataset and data loader for batching and shuffling.
+        dataset = torch.utils.data.TensorDataset(X, Y)
+        dataloader = torch.utils.data.DataLoader(
+            dataset, batch_size=self.batch_size, shuffle=True
+        )
+
+        # Training loop
+        for epoch in range(self.nb_epoch):
+            epoch_loss = 0.0
+
+            # Iterate over batches.
+            for batch_X, batch_Y in dataloader:
+
+                self.optimiser.zero_grad()  # Reset gradients
+                predictions = self.model(batch_X)  # Perform forward pass
+                loss = self.loss_criterion(predictions, batch_Y)  # Compute the loss
+                loss.backward()  # Perform backwards pass to compute gradients of loss
+                self.optimiser.step()  # Perform one step of gradient descent and update weights
+                epoch_loss += loss.item()  # Accumulate loss
+
+            # Print the average loss every 100 epochs
+            if (epoch + 1) % 100 == 0:
+                avg_loss = epoch_loss / len(dataloader)
+                print(f"Epoch {epoch + 1}/{self.nb_epoch}, Loss: {avg_loss:.4f}")
+
         return self
 
         #######################################################################
@@ -159,8 +207,18 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X, _ = self._preprocessor(x, training = False) # Do not forget
-        pass
+
+        X, _ = self._preprocessor(x, training=False)
+
+        # set model to evaluation mode
+        self.model.eval()
+
+        with torch.no_grad():
+            predictions = self.model(X)
+
+        # Inverse the normalization to return predictions in the original scale.
+        y_pred = predictions * self._y_std + self._y_mean
+        return y_pred.numpy()
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -185,7 +243,20 @@ class Regressor():
         #######################################################################
 
         X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
-        return 0 # Replace this code with your own
+        self.model.eval()
+
+        y_pred = self.predict(x)
+        y_true = y.values
+        y_true = y.values if isinstance(y, pd.DataFrame) else np.array(y)
+
+        # Calculate metrics
+        mse = mean_squared_error(y_true, y_pred)
+        ### r2 = r2_score(y_true, y_pred)
+
+        print(f"Mean Squared Error: {mse:.2f}")
+        ### print(f"R² Score: {r2:.4f}")
+
+        return mse
 
         #######################################################################
         #                       ** END OF YOUR CODE **
