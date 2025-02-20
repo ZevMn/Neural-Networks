@@ -246,6 +246,7 @@ class Regressor():
         self.model.eval()
 
         y_pred = self.predict(x)
+        #y_true = Y.numpy() ???
         y_true = y.values
         y_true = y.values if isinstance(y, pd.DataFrame) else np.array(y)
 
