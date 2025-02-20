@@ -4,7 +4,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import GridSearchCV
+from itertools import product
 
 
 class Regressor():
@@ -318,6 +318,12 @@ def perform_hyperparameter_search(x_train, y_train):
     }
 
     best_mse, best_params = float('inf'), None
+
+    total_combinations = (len(param_grid["learning_rate"]) *
+                          len(param_grid["hidden_size"]) *
+                          len(param_grid["batch_size"]) *
+                          len(param_grid["nb_epoch"]))
+    count = 0
 
     # Iterate over all combinations using itertools.product
     for lr, hs, bs, ep in product(param_grid["learning_rate"],
