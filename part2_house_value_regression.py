@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import GridSearchCV
 
 
 class Regressor():
@@ -282,7 +283,7 @@ def load_regressor():
 
 
 
-def perform_hyperparameter_search(): 
+def perform_hyperparameter_search(x_train, y_train):
     # Ensure to add whatever inputs you deem necessary to this function
     """
     Performs a hyper-parameter for fine-tuning the regressor implemented 
@@ -299,15 +300,55 @@ def perform_hyperparameter_search():
     #######################################################################
     #                       ** START OF YOUR CODE **
     #######################################################################
-    # Learning Rate
-    # Hidden Layer Size
-    # Batch Size
-    # Epoch
-    paramgrid = {
-        learning_rate: [0.0001, 0.001, 0.01,0.1],
-        Hidden_layer)O
+
+    # Split the data into training and validation sets (80/20 split)
+    x_tr, x_val, y_tr, y_val = train_test_split(
+        x_train,
+        y_train,
+        test_size=0.2,
+        random_state=42
+    )
+
+    # Define the hyperparameter grid
+    param_grid = {
+        "learning_rate": [0.0001, 0.001, 0.01, 0.1],
+        "hidden_size": [10, 20, 50],
+        "batch_size": [16, 32, 64, 128],
+        "nb_epoch": [100, 500, 1000, 1500]
     }
-    return  # Return the chosen hyper parameters
+
+    best_mse, best_params = float('inf'), None
+
+    # Iterate over all combinations using itertools.product
+    for lr, hs, bs, ep in product(param_grid["learning_rate"],
+                                  param_grid["hidden_size"],
+                                  param_grid["batch_size"],
+                                  param_grid["nb_epoch"]):
+
+        count += 1
+        print(f"\nTesting combination {count}/{total_combinations}")
+        print(f"Parameters: learning_rate={lr}, hidden_size={hs}, batch_size={bs}, nb_epoch={ep}")
+
+        # Initialize and train the model on the training split
+        model = Regressor(x_tr, nb_epoch=ep, hidden_size=hs, learning_rate=lr, batch_size=bs)
+        model.fit(x_tr, y_tr)
+
+        mse = model.score(x_val, y_val)
+        print(f"Validation MSE: {mse:.4f}")
+
+        if mse < best_mse:
+            best_mse = mse
+            best_params = {
+                "learning_rate": lr,
+                "hidden_size": hs,
+                "batch_size": bs,
+                "nb_epoch": ep
+            }
+
+        print(f"Validation MSE: {mse:.4f}")
+
+    print(f"\nBest hyperparameters: {best_params} with MSE: {best_mse:.4f}")
+    return best_params
 
     #######################################################################
     #                       ** END OF YOUR CODE **
