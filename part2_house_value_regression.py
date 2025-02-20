@@ -242,20 +242,16 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
-        self.model.eval()
+        ### NECESSARY??? ### X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
 
+        self.model.eval()
         y_pred = self.predict(x)
-        #y_true = Y.numpy() ???
         y_true = y.values
-        y_true = y.values if isinstance(y, pd.DataFrame) else np.array(y)
 
         # Calculate metrics
         mse = mean_squared_error(y_true, y_pred)
-        ### r2 = r2_score(y_true, y_pred)
 
         print(f"Mean Squared Error: {mse:.2f}")
-        ### print(f"R² Score: {r2:.4f}")
 
         return mse
 
@@ -303,7 +299,14 @@ def perform_hyperparameter_search():
     #######################################################################
     #                       ** START OF YOUR CODE **
     #######################################################################
-
+    # Learning Rate
+    # Hidden Layer Size
+    # Batch Size
+    # Epoch
+    paramgrid = {
+        learning_rate: [0.0001, 0.001, 0.01,0.1],
+        Hidden_layer)O
+    }
     return  # Return the chosen hyper parameters
 
     #######################################################################
