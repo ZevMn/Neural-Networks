@@ -98,6 +98,83 @@ class Regressor():
         # One-hot encode categorical columns.
         x = pd.get_dummies(x, columns=cat_cols, drop_first=False)
 
+    ##################################################################################
+    ##################################################################################
+
+        # Handle categorical columns with LabelBinarizer
+        if cat_cols:
+            from sklearn.preprocessing import LabelBinarizer
+
+            if training:
+                # Initialize binarizers dictionary for each categorical column
+                self._label_binarizers = {}
+
+                # Process each categorical column
+                for col in cat_cols:
+                    lb = LabelBinarizer()
+                    # Fit and transform the column
+                    bin_array = lb.fit_transform(x[col])
+                    # Store the binarizer for future use
+                    self._label_binarizers[col] = lb
+
+                    # Get feature names for the binary columns
+                    if len(lb.classes_) == 2:  # Binary case
+                        bin_feature_names = [f"{col}_{lb.classes_[1]}"]
+                    else:  # Multi-class case
+                        bin_feature_names = [f"{col}_{c}" for c in lb.classes_]
+
+                    # Create DataFrame with proper column names
+                    bin_df = pd.DataFrame(
+                        bin_array,
+                        columns=bin_feature_names,
+                        index=x.index
+                    )
+
+                    # Drop original column and concatenate new binary columns
+                    x = x.drop(columns=[col])
+                    x = pd.concat([x, bin_df], axis=1)
+
+                # Store all column names after binarization for consistency
+                self._x_columns_after_binarize = x.columns
+
+            else:
+                # For testing/validation data, use stored binarizers
+                if hasattr(self, '_label_binarizers'):
+                    for col in cat_cols:
+                        if col in self._label_binarizers:
+                            lb = self._label_binarizers[col]
+                            # Transform using stored binarizer
+                            bin_array = lb.transform(x[col])
+
+                            # Get feature names
+                            if len(lb.classes_) == 2:  # Binary case
+                                bin_feature_names = [f"{col}_{lb.classes_[1]}"]
+                            else:  # Multi-class case
+                                bin_feature_names = [f"{col}_{c}" for c in lb.classes_]
+
+                            # Create DataFrame with proper column names
+                            bin_df = pd.DataFrame(
+                                bin_array,
+                                columns=bin_feature_names,
+                                index=x.index
+                            )
+
+                            # Drop original column and concatenate new binary columns
+                            x = x.drop(columns=[col])
+                            x = pd.concat([x, bin_df], axis=1)
+
+                    # Ensure we have all expected columns
+                    if hasattr(self, '_x_columns_after_binarize'):
+                        # Add missing columns with zeros
+                        for col in self._x_columns_after_binarize:
+                            if col not in x.columns:
+                                x[col] = 0
+                        # Ensure column order matches training
+                        x = x[self._x_columns_after_binarize]
+
+##################################################################################
+##################################################################################
+
         if training:
             # Store the full set of columns to ensure consistency in test mode.
             self._x_columns = x.columns
@@ -105,6 +182,10 @@ class Regressor():
             # Reindex to match training columns, if stored.
             if hasattr(self, '_x_columns'):
                 x = x.reindex(columns=self._x_columns, fill_value=0)
+                """ missing_cols = set(self._x_columns) - set(x.columns)
+                for col in missing_cols:
+                    x[col] = 0
+                x = x[self._x_columns] """
 
         # Compute and apply Z-score normalisation for numeric columns
         x[num_cols] = (x[num_cols] - self._num_means) / self._num_stds
