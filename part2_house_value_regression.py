@@ -54,28 +54,22 @@ class Regressor():
         #                       ** END OF YOUR CODE **
         #######################################################################
 
-
-    def _preprocessor(self, x, y = None, training = False):
-        """ 
+    def _preprocessor(self, x, y=None, training=False):
+        """
         Preprocess input of the network.
-          
+
         Arguments:
-            - x {pd.DataFrame} -- Raw input array of shape 
-                (batch_size, input_size).
+            - x {pd.DataFrame} -- Raw input array of shape (batch_size, input_size).
             - y {pd.DataFrame} -- Raw target array of shape (batch_size, 1).
-            - training {boolean} -- Boolean indicating if we are training or 
-                testing the model.
+            - training {boolean} -- Boolean indicating if we are training or testing the model.
 
         Returns:
-            - {torch.tensor} or {numpy.ndarray} -- Preprocessed input array of
-              size (batch_size, input_size). The input_size does not have to be the same as the input_size for x above.
-            - {torch.tensor} or {numpy.ndarray} -- Preprocessed target array of
-              size (batch_size, 1).
-            
+            - {torch.tensor} or {numpy.ndarray} -- Preprocessed input array of size (batch_size, input_size).
+            - {torch.tensor} or {numpy.ndarray} -- Preprocessed target array of size (batch_size, 1).
         """
 
         #######################################################################
-        #                       ** START OF YOUR CODE **
+        #                        ** START OF YOUR CODE **
         #######################################################################
 
         # Work on a copy to avoid modifying the original data.
@@ -88,7 +82,7 @@ class Regressor():
         # Fill missing values (if any).
         if training:
             self._num_means = x[num_cols].mean()
-            self._num_stds = x[num_cols].std().replace(0, 1) # Avoid division by zero
+            self._num_stds = x[num_cols].std().replace(0, 1)  # Avoid division by zero
 
         if num_cols:
             x[num_cols] = x[num_cols].fillna(self._num_means)
@@ -96,99 +90,25 @@ class Regressor():
             x[cat_cols] = x[cat_cols].fillna("missing")
 
         # One-hot encode categorical columns.
-        x = pd.get_dummies(x, columns=cat_cols, drop_first=False)
-
-    ##################################################################################
-    ##################################################################################
-
-        # Handle categorical columns with LabelBinarizer
         if cat_cols:
-            from sklearn.preprocessing import LabelBinarizer
+            x = pd.get_dummies(x, columns=cat_cols, drop_first=False)
 
-            if training:
-                # Initialize binarizers dictionary for each categorical column
-                self._label_binarizers = {}
-
-                # Process each categorical column
-                for col in cat_cols:
-                    lb = LabelBinarizer()
-                    # Fit and transform the column
-                    bin_array = lb.fit_transform(x[col])
-                    # Store the binarizer for future use
-                    self._label_binarizers[col] = lb
-
-                    # Get feature names for the binary columns
-                    if len(lb.classes_) == 2:  # Binary case
-                        bin_feature_names = [f"{col}_{lb.classes_[1]}"]
-                    else:  # Multi-class case
-                        bin_feature_names = [f"{col}_{c}" for c in lb.classes_]
-
-                    # Create DataFrame with proper column names
-                    bin_df = pd.DataFrame(
-                        bin_array,
-                        columns=bin_feature_names,
-                        index=x.index
-                    )
-
-                    # Drop original column and concatenate new binary columns
-                    x = x.drop(columns=[col])
-                    x = pd.concat([x, bin_df], axis=1)
-
-                # Store all column names after binarization for consistency
-                self._x_columns_after_binarize = x.columns
-
-            else:
-                # For testing/validation data, use stored binarizers
-                if hasattr(self, '_label_binarizers'):
-                    for col in cat_cols:
-                        if col in self._label_binarizers:
-                            lb = self._label_binarizers[col]
-                            # Transform using stored binarizer
-                            bin_array = lb.transform(x[col])
-
-                            # Get feature names
-                            if len(lb.classes_) == 2:  # Binary case
-                                bin_feature_names = [f"{col}_{lb.classes_[1]}"]
-                            else:  # Multi-class case
-                                bin_feature_names = [f"{col}_{c}" for c in lb.classes_]
-
-                            # Create DataFrame with proper column names
-                            bin_df = pd.DataFrame(
-                                bin_array,
-                                columns=bin_feature_names,
-                                index=x.index
-                            )
-
-                            # Drop original column and concatenate new binary columns
-                            x = x.drop(columns=[col])
-                            x = pd.concat([x, bin_df], axis=1)
-
-                    # Ensure we have all expected columns
-                    if hasattr(self, '_x_columns_after_binarize'):
-                        # Add missing columns with zeros
-                        for col in self._x_columns_after_binarize:
-                            if col not in x.columns:
-                                x[col] = 0
-                        # Ensure column order matches training
-                        x = x[self._x_columns_after_binarize]
-
-##################################################################################
-##################################################################################
-
+        # Ensure consistency in training/testing column order
         if training:
-            # Store the full set of columns to ensure consistency in test mode.
-            self._x_columns = x.columns
+            self._x_columns = x.columns  # Store training columns
         else:
-            # Reindex to match training columns, if stored.
             if hasattr(self, '_x_columns'):
-                x = x.reindex(columns=self._x_columns, fill_value=0)
-                """ missing_cols = set(self._x_columns) - set(x.columns)
+                missing_cols = set(self._x_columns) - set(x.columns)
                 for col in missing_cols:
-                    x[col] = 0
-                x = x[self._x_columns] """
+                    x[col] = 0  # Add missing columns with zero values
+                x = x[self._x_columns]  # Ensure column order matches training
 
         # Compute and apply Z-score normalisation for numeric columns
         x[num_cols] = (x[num_cols] - self._num_means) / self._num_stds
+
+        # Convert boolean columns to float (Fix for PyTorch tensor conversion issue)
+        bool_cols = x.select_dtypes(include=['bool']).columns.tolist()
+        x[bool_cols] = x[bool_cols].astype(float)
 
         # Convert processed DataFrame to a torch tensor.
         X_tensor = torch.tensor(x.values, dtype=torch.float32)
@@ -198,14 +118,21 @@ class Regressor():
             y = y.copy()
 
             if training:
-                self._y_mean = y.mean()
-                self._y_std = y.std().replace(0, 1)
+                self._y_mean = y.mean().values[0]  # Store as scalar
+                self._y_std = y.std().replace(0, 1).values[0]  # Store as scalar
+            else:
+                # Ensure self._y_mean and self._y_std were already set during training
+                if not hasattr(self, '_y_mean') or not hasattr(self, '_y_std'):
+                    raise AttributeError("self._y_mean and self._y_std are missing. "
+                                         "Ensure that fit() was called before predict().")
 
-            y = y.fillna(self._y_mean) # Fill in missing y values with training mean
+            y = y.fillna(self._y_mean)  # Fill missing values with scalar mean
 
-            y_normalised = (y.values - self._y_mean) / self._y_std # Normalise
+            # Normalize y using the stored mean and std
+            y_normalised = (y.values - self._y_mean) / self._y_std
+
+            # Convert to PyTorch tensor
             Y_tensor = torch.tensor(y_normalised, dtype=torch.float32).reshape(-1, 1)
-
         else:
             Y_tensor = None
 
@@ -213,10 +140,9 @@ class Regressor():
         return X_tensor, Y_tensor
 
         #######################################################################
-        #                       ** END OF YOUR CODE **
+        #                        ** END OF YOUR CODE **
         #######################################################################
 
-        
     def fit(self, x, y):
         """
         Regressor training function
@@ -236,7 +162,7 @@ class Regressor():
         #######################################################################
 
         # Preprocess the data. Ensure that X and Y are PyTorch tensors
-        X, Y = self._preprocessor(x, y=y, training=False)
+        X, Y = self._preprocessor(x, y=y, training=True)
 
         # Set model to training mode
         self.model.train()
@@ -325,7 +251,7 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        ### NECESSARY??? ### X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
+        X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
 
         self.model.eval()
         y_pred = self.predict(x)
