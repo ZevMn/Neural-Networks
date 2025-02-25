@@ -6,6 +6,7 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 from itertools import product
+import matplotlib.pyplot as plt
 
 
 class Regressor():
@@ -174,6 +175,7 @@ class Regressor():
         )
 
         # Training loop
+        loss_history = []
         for epoch in range(self.nb_epoch):
             epoch_loss = 0.0
 
@@ -187,10 +189,21 @@ class Regressor():
                 self.optimiser.step()  # Perform one step of gradient descent and update weights
                 epoch_loss += loss.item()  # Accumulate loss
 
+            avg_loss = epoch_loss / len(dataloader)
+            loss_history.append(avg_loss)
+
             # Print the average loss every 100 epochs
             if (epoch + 1) % 100 == 0:
-                avg_loss = epoch_loss / len(dataloader)
                 print(f"Epoch {epoch + 1}/{self.nb_epoch}, Loss: {avg_loss:.4f}")
+
+        # Plotting the loss
+        plt.figure(figsize=(8, 5))
+        plt.plot(range(1, self.nb_epoch + 1), loss_history, label='Training Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss (MSE)')
+        plt.title('Training Loss over Epochs')
+        plt.legend()
+        plt.show()
 
         return self
 
@@ -382,19 +395,19 @@ def example_main():
     # You probably want to separate some held-out data 
     # to make sure the model isn't overfitting
 
-    x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=0.1, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
 
     regressor = Regressor(x_train, nb_epoch = 10)
     regressor.fit(x_train, y_train)
     save_regressor(regressor)
 
     # Error
-    error = regressor.score(x_val, y_val)
+    error = regressor.score(x_test, y_test)
     print(f"\nRegressor error: {error}\n")
 
 
     # Hyperparameter tuning
-    best_params = perform_hyperparameter_search(x, y)
+    best_params = perform_hyperparameter_search(x_train, y_train)
 
     learning_rate = best_params["learning_rate"]
     hidden_size = best_params["hidden_size"]
@@ -406,7 +419,7 @@ def example_main():
     save_regressor(optimised_regressor)
 
     # Error in the optimised model
-    error = optimised_regressor.score(x_val, y_val)
+    error = optimised_regressor.score(x_test, y_test)
     print(f"\nRegressor error: {error}\n")
 
 
