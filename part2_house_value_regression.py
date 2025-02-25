@@ -216,7 +216,6 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-
         X, _ = self._preprocessor(x, training=False)
 
         # set model to evaluation mode
@@ -256,10 +255,11 @@ class Regressor():
 
         # Calculate metrics
         mse = mean_squared_error(y_true, y_pred)
+        rmse = np.sqrt(mse)
 
-        print(f"Mean Squared Error: {mse:.2f}")
+        print(f"Root Mean Squared Error: {rmse:.2f}")
 
-        return mse
+        return rmse
 
         #######################################################################
         #                       ** END OF YOUR CODE **
@@ -285,7 +285,6 @@ def load_regressor():
         trained_model = pickle.load(target)
     print("\nLoaded model in part2_model.pickle\n")
     return trained_model
-
 
 
 def perform_hyperparameter_search(x_train, y_train):
@@ -365,8 +364,6 @@ def perform_hyperparameter_search(x_train, y_train):
     #                       ** END OF YOUR CODE **
     #######################################################################
 
-
-
 def example_main():
 
     output_label = "median_house_value"
@@ -385,7 +382,7 @@ def example_main():
     # You probably want to separate some held-out data 
     # to make sure the model isn't overfitting
 
-    x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=0.2, random_state=42)
+    x_train, x_val, y_train, y_val = train_test_split(x, y, test_size=0.1, random_state=42)
 
     regressor = Regressor(x_train, nb_epoch = 10)
     regressor.fit(x_train, y_train)
