@@ -393,6 +393,26 @@ def example_main():
     print(f"\nRegressor error: {error}\n")
 
 
+    # Hyperparameter tuning
+    best_params = perform_hyperparameter_search(x, y)
+
+    learning_rate = best_params["learning_rate"]
+    hidden_size = best_params["hidden_size"]
+    batch_size = best_params["batch_size"]
+    nb_epoch = best_params["nb_epoch"]
+
+    optimised_regressor = Regressor(x_train, learning_rate=learning_rate, hidden_size=hidden_size, batch_size=batch_size, nb_epoch=nb_epoch)
+    optimised_regressor.fit(x_train, y_train)
+    save_regressor(optimised_regressor)
+
+    # Error in the optimised model
+    error = optimised_regressor.score(x_val, y_val)
+    print(f"\nRegressor error: {error}\n")
+
+
+
+
+
 if __name__ == "__main__":
     example_main()
 
