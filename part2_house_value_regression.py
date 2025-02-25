@@ -251,9 +251,6 @@ class Regressor():
         #                       ** START OF YOUR CODE **
         #######################################################################
 
-        X, Y = self._preprocessor(x, y = y, training = False) # Do not forget
-
-        self.model.eval()
         y_pred = self.predict(x)
         y_true = y.values
 
