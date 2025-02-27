@@ -49,6 +49,8 @@ class Regressor():
             torch.nn.Linear(self.hidden_size, self.hidden_size),
             torch.nn.ReLU(),
             torch.nn.Linear(self.hidden_size, self.hidden_size),
+            torch.nn.Sigmoid(),
+            torch.nn.Linear(self.hidden_size, self.hidden_size),
             torch.nn.ReLU(),  # Replacing Sigmoid
             torch.nn.Linear(self.hidden_size, self.output_size)
         ).to(device)  # Move model to GPU
@@ -73,7 +75,7 @@ class Regressor():
         #######################################################################
 
         x = x.copy()
-        num_cols = x.select_dtypes(include=['number']).columns.tolist()
+        num_cols = x.select_dtypes(include=[np.number]).columns.tolist()
         cat_cols = x.select_dtypes(exclude=['number']).columns.tolist()
 
         if training:
@@ -84,7 +86,7 @@ class Regressor():
         x[cat_cols] = x[cat_cols].fillna("missing")
 
         if cat_cols:
-            x = pd.get_dummies(x, columns=cat_cols, drop_first=False)
+            x = pd.get_dummies(x, columns=cat_cols, drop_first=False).astype(float)
 
         if training:
             self._x_columns = list(x.columns)
@@ -101,13 +103,42 @@ class Regressor():
                 self._y_mean = y.mean().values[0]
                 self._y_std = max(y.std().values[0], 1e-8)
 
-            y = y.fillna(self._y_mean)
+            y = y.fillna(self._y_mean).astype(float)
             y_normalised = (y.values - self._y_mean) / self._y_std
             Y_tensor = torch.tensor(y_normalised, dtype=torch.float32).reshape(-1, 1).to(device)
         else:
             Y_tensor = None
 
         return X_tensor, Y_tensor
+
+    def fit(self, x, y):
+        """
+        Regressor training function.
+        """
+        X, Y = self._preprocessor(x, y=y, training=True)
+
+        self.model.train()
+        dataset = torch.utils.data.TensorDataset(X, Y)
+        dataloader = torch.utils.data.DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+
+        loss_history = []
+        for epoch in range(self.nb_epoch):
+            epoch_loss = 0.0
+            for batch_X, batch_Y in dataloader:
+                self.optimiser.zero_grad()
+                predictions = self.model(batch_X)
+                loss = self.loss_criterion(predictions, batch_Y)
+                loss.backward()
+                self.optimiser.step()
+                epoch_loss += loss.item()
+
+            avg_loss = epoch_loss / len(dataloader)
+            loss_history.append(avg_loss)
+
+            if (epoch + 1) % 100 == 0:
+                print(f"Epoch {epoch + 1}/{self.nb_epoch}, Loss: {avg_loss:.4f}")
+
+        return self
 
     def predict(self, x):
         """
@@ -137,7 +168,7 @@ def example_main():
     Main function to train and evaluate the regressor.
     """
     output_label = "median_house_value"
-    data = pd.read_csv("/content/housing.csv")
+    data = pd.read_csv("housing.csv")
     x = data.drop(columns=[output_label])
     y = data[[output_label]]
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.1, random_state=42)
