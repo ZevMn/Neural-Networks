@@ -209,11 +209,10 @@ class Regressor():
 
         # Plotting the loss
         plt.figure(figsize=(8, 5))
-        plt.plot(range(1, self.nb_epoch + 1), loss_history, label='Training Loss')
+        plt.plot(range(1, self.nb_epoch + 1), loss_history)
         plt.xlabel('Epoch')
         plt.ylabel('Loss (MSE)')
-        plt.title('Training Loss over Epochs')
-        plt.legend()
+        plt.title('Loss during training of the neural network model over epochs')
         plt.show()
 
         return self
