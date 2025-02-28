@@ -13,7 +13,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Regressor():
-    def __init__(self, x, nb_epoch=100, hidden_size=32, learning_rate=0.01, batch_size=64):
+    def __init__(self, x, nb_epoch=100, hidden_size=32, learning_rate=0.001, batch_size=16):
         """
         Initialise the model.
 
